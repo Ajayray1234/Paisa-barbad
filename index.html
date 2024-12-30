@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BDG Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .center {
+            text-align: center;
+        }
+        .header, .footer {
+            background-color: #ffcc00;
+            padding: 10px;
+        }
+        .prediction {
+            background-color: #ff4d4d;
+            color: white;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .result-section {
+            background-color: #28a745;
+            color: white;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .table-container {
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f0ad4e;
+        }
+        .footer-divider {
+            margin-top: 20px;
+            border-top: 3px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="header center">
+        <h1>BDG GAME</h1>
+    </div>
+    <div class="prediction center">
+        <p>Next Prediction: <strong id="predicted-number"></strong> <strong id="predicted-result"></strong></p>
+    </div>
+    <div class="result-section">
+        <p>Result: <span id="result"></span></p>
+        <p>Time Remaining: <span id="time-remaining"></span></p>
+        <p>Period: <span id="period"></span></p>
+    </div>
+    <div class="table-container">
+        <h2>Historical Data</h2>
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>Period</th>
+                    <th>Number</th>
+                    <th>Big Small</th>
+                </tr>
+            </thead>
+            <tbody id="history-body">
+                <!-- Historical data will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+    <div class="footer center footer-divider">
+        <p>Game ended.</p>
+    </div>
+    <script>
+        function generatePeriodNumber() {
+            const now = new Date();
+            const hours = now.getUTCHours();
+            const minutes = now.getUTCMinutes();
+            const totalMinutes = hours * 60 + minutes;
+            const periodNumber = 10001 + totalMinutes;
+            return periodNumber;
+        }
+
+        function classifyNumber(number) {
+            return number >= 5 ? "BIG" : "SMALL";
+        }
+
+        function displayResults(predictedNumber, predictedResult, periodString, historicalData, timeRemaining) {
+            document.getElementById('predicted-number').textContent = predictedNumber;
+            document.getElementById('predicted-result').textContent = predictedResult;
+            document.getElementById('result').textContent = predictedResult;
+            document.getElementById('period').textContent = periodString;
+            document.getElementById('time-remaining').textContent = timeRemaining + "s";
+
+            const historyBody = document.getElementById('history-body');
+            historyBody.innerHTML = ''; // Clear existing table data
+
+            historicalData.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${record.period}</td>
+                    <td>${record.number}</td>
+                    <td>${record.big_small}</td>
+                `;
+                historyBody.appendChild(row);
+            });
+        }
+
+        let historicalData = [];
+        let countdownInterval = null;
+
+        // Pattern array
+        const pattern = [
+            { numbers: [7, 8], result: "BIG" }, { numbers: [2, 3], result: "SMALL" },
+            { numbers: [8, 6], result: "BIG" }, { numbers: [0, 3], result: "SMALL" },
+            { numbers: [1, 4], result: "SMALL" }, { numbers: [2, 0], result: "SMALL" },
+            { numbers: [9, 7], result: "BIG" }, { numbers: [4, 3], result: "SMALL" },
+            { numbers: [7, 5], result: "BIG" }, { numbers: [9, 8], result: "BIG" },
+            { numbers: [1, 2], result: "SMALL" }, { numbers: [4, 0], result: "SMALL" },
+            { numbers: [4, 1], result: "SMALL" }, { numbers: [7, 6], result: "BIG" },
+            { numbers: [7, 5], result: "BIG" }, { numbers: [5, 9], result: "BIG" },
+            { numbers: [5, 7], result: "BIG" }, { numbers: [1, 2], result: "SMALL" },
+            { numbers: [4, 3], result: "SMALL" }, { numbers: [7, 8], result: "BIG" },
+            { numbers: [3, 2], result: "SMALL" }, { numbers: [5, 9], result: "BIG" },
+            { numbers: [9, 8], result: "BIG" }, { numbers: [1, 3], result: "SMALL" },
+            { numbers: [5, 9], result: "BIG" }, { numbers: [4, 3], result: "SMALL" },
+            { numbers: [1, 2], result: "SMALL" }, { numbers: [4, 3], result: "SMALL" },
+            { numbers: [9, 7], result: "BIG" }, { numbers: [3, 1], result: "SMALL" },
+            { numbers: [1, 0], result: "SMALL" }, { numbers: [9, 6], result: "BIG" },
+            { numbers: [0, 1], result: "SMALL" }, { numbers: [6, 9], result: "BIG" }
+        ];
+
+        // Prompt user for initial input
+        const initialNumber = prompt("Input Number:");
+        const initialType = prompt("Big/Small:").toUpperCase();
+
+        if (initialNumber && initialType) {
+            historicalData.push({
+                period: generatePeriodNumber(),
+                number: initialNumber,
+                big_small: initialType
+            });
+        }
+
+        let lastPeriodTime = new Date();
+
+        setInterval(() => {
+            const now = new Date();
+            if (now.getUTCMinutes() !== lastPeriodTime.getUTCMinutes()) {
+                const periodNumber = generatePeriodNumber();
+                const periodString = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}${String(now.getUTCDate()).padStart(2, '0')}${periodNumber}`;
+                const currentIndex = historicalData.length % pattern.length;
+                const currentPrediction = pattern[currentIndex];
+
+                historicalData.push({
+                    period: periodString,
+                    big_small: currentPrediction.result,
+                    number: currentPrediction.numbers.join(', ')
+                });
+
+                if (historicalData.length > 10) {
+                    historicalData.shift();
+                }
+
+                let timeRemaining = 60;
+
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                }
+
+                countdownInterval = setInterval(() => {
+                    if (timeRemaining <= 0) {
+                        clearInterval(countdownInterval);
+                    } else {
+                        timeRemaining--;
+                        displayResults(currentPrediction.numbers.join(', '), currentPrediction.result, periodString, historicalData, timeRemaining);
+                    }
+                }, 1000);
+
+                lastPeriodTime = now;
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
